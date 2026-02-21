@@ -139,3 +139,25 @@ fn test_investor_invalid() {
       );
 }
 
+#[test]
+unconstrained fn test_sender(){
+  let (name, surname, age, address, wallet, country_code, investor_type, kyc_face, salt, max_amount, nonce, s0, s1, s2, s3, root, nullifier) = get_root();
+  let senders = [
+    0x6d5e982A63B9E4055B7b7CfBAC25ba908061e1A5,
+    0xAbC1234F1D56789b2C3dEf4567890aBcDE123456,
+    0xDeF98765aBc1234567890fEdCBA9876543210aBc,
+    0x1234ABcd5678EF9012345678abCDEF9012345678,
+    0xAaBbCcDdEeFf00112233445566778899AaBbCcDd,
+    0x0fFfEeDdCcBbAa99887766554433221100AaBbCc,
+    0xFace1234bEef5678901234fAcE56789012bCDeF1,
+    0xCafeBabe1234567890abcdef1234567890ABCDEF,
+    0xBEEf1234567890abcdefABCDEF1234567890abcd,
+    0xdeadBeef00112233445566778899aAbBcCdDeEf0,
+  ];
+
+  for sender in senders {
+    if sender == wallet {
+      break;
+    }
+  }
+}
