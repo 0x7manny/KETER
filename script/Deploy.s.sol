@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 import {KeterToken} from "../src/KeterToken.sol";
 import {Registry} from "../src/Registry.sol";
-import {UltraVerifier} from "../src/UltraVerifier.sol";
+import {HonkVerifier as UltraVerifier} from "../src/UltraVerifier.sol";
 
 contract DeployKeter is Script {
     function run() external {
