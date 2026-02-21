@@ -1,5 +1,7 @@
 use dep::std;
 use poseidon::poseidon::bn254::{hash_2, hash_8};
+mod test;
+
 
 global AUSTRIA: Field = 1;
 global BELGIUM: Field = 2;
@@ -42,26 +44,28 @@ fn main (
     address: Field, 
     wallet: Field,
     country_code: Field,
+    kyc_face: Field, 
     investor_type: Field, 
+    max_amount: Field,
+    nonce: Field,
     salt: Field, 
     merkle_path: [Field; TREE_DEPTH], 
     path_indices: [Field; TREE_DEPTH], 
-    nonce: Field,
-    sender: pub Field,
     merkle_root: pub Field,
-    max_amount: pub Field,
     nullifier: pub Field,
-    transfer_amount: pub Field,
     recipient: pub Field,
+    sender: pub Field,
+    transfer_amount: pub Field,
 )
 {
-  let leaf = hash_8([name, surname, age, address, wallet, country_code, investor_type, salt)]);
-  let leaf_final = hash_2([leaft, max_amount]);
+  let leaf = hash_8([name, surname, age, address, wallet, country_code, investor_type, kyc_face]);
+  let leaf_inter = hash_2([leaf, salt,]);
+  let leaf_final = hash_2([leaf_inter, max_amount]);
   let computed = hash_2([salt, nonce]);
 
-  assert(nullifier == computed);
+  assert(nullifier == computed, "InvalidNullifier");
 
-  assert(wallet == sender);
+  assert(wallet == sender, "UnauthorizedSender");
 
   let mut current = leaf_final;
   for i in 0..4 {
@@ -94,15 +98,14 @@ fn main (
       }
   };
 
-  assert(country_valid);
+  assert(country_valid, "InvalidCountryCode");
 
-  assert(investor_type == QUALIFIED | investor_type == RETAIL);
+  assert((investor_type == QUALIFIED) | (investor_type == RETAIL), "InvalidInvestorType");
 
   let amount = transfer_amount;
   let max = max_amount;
-  assert(amount <= max as u64);
 
+  assert(amount as u64 <= max as u64, "AllocationLimitExceeded");
 }
-
 
 
