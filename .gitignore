@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+lib/
 .pnp
 .pnp.js
 
@@ -14,9 +15,12 @@ out/
 .env.local
 .env.*.local
 
-# Blockchain
-artifacts/
+# Foundry
 cache/
+broadcast/
+
+# Blockchain (legacy Hardhat)
+artifacts/
 typechain-types/
 deployments/localhost/
 
