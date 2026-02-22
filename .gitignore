@@ -9,6 +9,7 @@ dist/
 build/
 out/
 .next/
+target/
 
 # Environment
 .env
@@ -35,5 +36,8 @@ Thumbs.db
 # Misc
 *.log
 coverage/
+<<<<<<< HEAD
 /frontend/.claude
 /.claude
+=======
+>>>>>>> features/noir_circuit

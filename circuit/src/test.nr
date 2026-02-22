@@ -161,6 +161,7 @@ unconstrained fn test_sender(){
     }
   }
 }
+<<<<<<< HEAD
 
 #[test]
 fn test_print_tree() {
@@ -180,3 +181,5 @@ fn test_print_nullifier2() {
     let nullifier2 = hash_2([salt, nonce]);
     println(f"nullifier2: {nullifier2}");
 }
+=======
+>>>>>>> features/noir_circuit
