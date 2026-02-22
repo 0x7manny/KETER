@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { MerkleTree, createEmptyTree, insertLeaf, getMerklePath, saveTree, loadTree } from '../utils/merkleTree';
-import { InvestorCredentials } from '../utils/credentials';
+import { InvestorCredentials, KYCRequest } from '../utils/credentials';
 
 export const useMerkleTree = () => {
   const [tree, setTree] = useState<MerkleTree | null>(null);
@@ -29,13 +29,13 @@ export const useMerkleTree = () => {
   }, []);
 
   const addLeaf = useCallback(async (
-    address: string,
-    countryCode: number,
-    investorType: number
+    request: KYCRequest,
+    wallet: string,
+    maxAmount: string
   ): Promise<InvestorCredentials | null> => {
     if (!tree) return null;
     try {
-      const { tree: updatedTree, credentials } = await insertLeaf(tree, address, countryCode, investorType);
+      const { tree: updatedTree, credentials } = await insertLeaf(tree, request, wallet, maxAmount);
       setTree(updatedTree);
       saveTree(updatedTree);
       return credentials;

@@ -5,8 +5,8 @@ libs = ["lib"]
 solc = "0.8.27"
 fs_permissions = [{ access = "read", path = "./circuit/test/fixtures" }]
 optimizer = true
-optimizer_runs = 200
-evm_version = "paris"
+optimizer_runs = 100
+evm_version = "shanghai"
 
 [profile.default.fmt]
 line_length = 120

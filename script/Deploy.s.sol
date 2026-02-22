@@ -8,15 +8,14 @@ import {HonkVerifier as UltraVerifier} from "../src/UltraVerifier.sol";
 
 contract DeployKeter is Script {
     function run() external {
-        uint256 deployerKey = vm.envUint("PRIVATE_KEY");
-
-        vm.startBroadcast(deployerKey);
+        // Supports both: --private-key flag OR PRIVATE_KEY env var
+        vm.startBroadcast();
 
         // 1. Registry
         Registry registry = new Registry();
         console.log("Registry:       ", address(registry));
 
-        // 2. UltraVerifier
+        // 2. UltraVerifier (constants baked in via inheritance)
         UltraVerifier verifier = new UltraVerifier();
         console.log("UltraVerifier:  ", address(verifier));
 

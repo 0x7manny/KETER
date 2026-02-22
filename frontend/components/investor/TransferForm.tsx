@@ -8,8 +8,9 @@ import LoadingProof from '../ui/LoadingProof';
 import { WalletState } from '../../hooks/useWallet';
 import { useMerkleTree } from '../../hooks/useMerkleTree';
 import { useProof } from '../../hooks/useProof';
-import { loadCredentials, saveTransfer } from '../../utils/credentials';
+import { loadCredentials, saveCredentials, saveTransfer } from '../../utils/credentials';
 import { transferWithProof, getErrorMessage } from '../../utils/contracts';
+import { poseidonHash } from '../../utils/poseidon';
 
 interface TransferFormProps {
   wallet: WalletState;
@@ -46,7 +47,14 @@ export function TransferForm({ wallet }: TransferFormProps) {
       // Load credentials
       const credentials = loadCredentials(wallet.address!);
       if (!credentials) {
-        setError('No KYC credentials found');
+        setError('No KYC credentials found. Please complete KYC first.');
+        setLoading(false);
+        return;
+      }
+
+      // Validate amount against bank-set transfer limit
+      if (parseFloat(amount) > parseFloat(credentials.maxAmount)) {
+        setError(`Amount exceeds your transfer limit (${credentials.maxAmount})`);
         setLoading(false);
         return;
       }
@@ -67,21 +75,46 @@ export function TransferForm({ wallet }: TransferFormProps) {
         return;
       }
 
-      // Build proof inputs
+      // Compute nullifier = poseidon_hash_2([salt, nonce])
+      const nullifier = await poseidonHash([
+        BigInt(credentials.salt),
+        BigInt(credentials.nonce),
+      ]);
+
+      // Build all 17 circuit inputs (13 private + 5 public)
       const inputs = {
-        address: BigInt(credentials.address).toString(),
+        // === 13 Private Inputs ===
+        name: credentials.name,
+        surname: credentials.surname,
+        age: credentials.age,
+        address: credentials.address,           // physical address as Field
+        wallet: credentials.wallet,              // ETH address as Field
         country_code: credentials.countryCode.toString(),
+        kyc_face: credentials.kycFace,
         investor_type: credentials.investorType.toString(),
+        max_amount: credentials.maxAmount,
+        nonce: credentials.nonce.toString(),
         salt: credentials.salt,
         merkle_path: proof.path.map((p: bigint) => p.toString()),
         path_indices: proof.indices.map((i: number) => i.toString()),
+        // === 5 Public Inputs ===
         merkle_root: root.toString(),
+        nullifier: nullifier.toString(),
+        recipient: BigInt(to).toString(),
+        sender: BigInt(wallet.address!).toString(),
+        transfer_amount: amount,
       };
 
       // Generate ZK proof
       const proofResult = await generateProof(inputs);
 
+      // Debug: log proof output to verify public inputs count & format
+      console.log('[Keter] Proof public inputs count:', proofResult.publicInputs.length);
+      console.log('[Keter] Proof public inputs:', proofResult.publicInputs);
+      console.log('[Keter] Proof bytes length:', proofResult.proof.length);
+
       // Transfer with proof on-chain
+      // Pass ALL public inputs from the proof (verifier expects 21, not just the 5 user-defined ones)
       const tx = await transferWithProof(
         wallet.signer!,
         to,
@@ -89,6 +122,13 @@ export function TransferForm({ wallet }: TransferFormProps) {
         proofResult.proof,
         proofResult.publicInputs
       );
+
+      // Increment nonce and save updated credentials
+      const updatedCredentials = {
+        ...credentials,
+        nonce: credentials.nonce + 1,
+      };
+      saveCredentials(wallet.address!, updatedCredentials);
 
       // Save transfer record
       saveTransfer({
@@ -100,7 +140,7 @@ export function TransferForm({ wallet }: TransferFormProps) {
         zkVerified: true,
       });
 
-      setSuccess(`Transfer successful! Tx: ${tx.hash}`);
+      setSuccess(`Transferred ${amount} KETER to ${to.slice(0, 8)}...${to.slice(-6)} — Tx: ${tx.hash}`);
       setTo('');
       setAmount('');
     } catch (err: any) {

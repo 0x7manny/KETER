@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import LandingPage from '@/components/landing/LandingPage';
 
@@ -10,23 +10,26 @@ export default function Home() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const handleConnect = async () => {
+  // Called by the modal — does the REAL MetaMask connection
+  const handleConnect = useCallback(async () => {
     setIsConnecting(true);
-    try {
-      await wallet.connect();
-      router.push('/dashboard');
-    } catch {
-      setIsConnecting(false);
-    }
-  };
+    await wallet.connect(); // MetaMask popup opens here
+    // If wallet.connect() throws, the modal catches it and shows error state
+  }, [wallet]);
 
-  const handleExplore = () => {
+  // Called AFTER the success animation finishes (2s delay)
+  const handleConnectSuccess = useCallback(() => {
     router.push('/dashboard');
-  };
+  }, [router]);
+
+  const handleExplore = useCallback(() => {
+    router.push('/dashboard');
+  }, [router]);
 
   return (
     <LandingPage
       onConnect={handleConnect}
+      onConnectSuccess={handleConnectSuccess}
       onExplore={handleExplore}
       isConnecting={isConnecting}
     />

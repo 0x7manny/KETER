@@ -35,9 +35,10 @@ export const getRegistry = (signerOrProvider: ethers.Signer | ethers.Provider) =
 };
 
 // === BANK ACTIONS ===
-export const mintTokens = async (signer: ethers.Signer, to: string, amount: number) => {
+export const issueTokens = async (signer: ethers.Signer, to: string, amount: number) => {
   const token = getZKToken(signer);
-  const tx = await token.mint(to, ethers.parseUnits(amount.toString(), 18));
+  // Raw integer amount (no decimals) — circuit uses u64, so amounts must stay raw
+  const tx = await token.issue(to, BigInt(amount), '0x');
   await tx.wait();
   return tx;
 };
@@ -67,12 +68,47 @@ export const transferWithProof = async (
   const pubInputsBytes32 = publicInputs.map(
     input => '0x' + BigInt(input).toString(16).padStart(64, '0')
   );
-  const tx = await token.transferWithProof(
-    to,
-    ethers.parseUnits(amount.toString(), 18),
-    proof,
-    pubInputsBytes32
-  );
+  const rawAmount = BigInt(amount);
+
+  // Pre-flight: check proof length matches on-chain verifier expectation (258 field elements for LOG_N=14)
+  const EXPECTED_PROOF_BYTES = 258 * 32; // 8256 bytes
+  if (proof.length !== EXPECTED_PROOF_BYTES) {
+    throw new Error(
+      `Proof length mismatch: got ${proof.length} bytes, expected ${EXPECTED_PROOF_BYTES}. ` +
+      `bb.js version may be incompatible with the deployed verifier.`
+    );
+  }
+
+  // Dry-run via raw provider.call with high gas limit (Honk verifier needs ~5-10M gas)
+  const from = await signer.getAddress();
+  const calldata = token.interface.encodeFunctionData('transferWithProof', [
+    to, rawAmount, proof, pubInputsBytes32,
+  ]);
+  try {
+    await signer.provider!.call({
+      to: CONTRACTS.ZK_TOKEN,
+      data: calldata,
+      from,
+      gasLimit: 30_000_000n,
+    });
+  } catch (staticErr: any) {
+    const reason = staticErr?.reason || staticErr?.revert?.args?.[0] || '';
+    // Try to decode verifier custom errors from raw revert data
+    const errData = staticErr?.data || staticErr?.error?.data;
+    let decoded = '';
+    if (errData && typeof errData === 'string' && errData.length >= 10) {
+      const sel = errData.slice(0, 10);
+      decoded = VERIFIER_ERRORS[sel] || `Unknown verifier error: ${sel}`;
+    }
+    const msg = decoded || reason || staticErr?.message || 'transferWithProof reverted (no reason)';
+    console.error('[Keter] staticCall revert:', msg, { reason, errData, staticErr });
+    throw new Error(msg);
+  }
+
+  // Raw integer amount — must match publicInputs[4] from the ZK proof exactly
+  const tx = await token.transferWithProof(to, rawAmount, proof, pubInputsBytes32, {
+    gasLimit: 10_000_000n,
+  });
   await tx.wait();
   return tx;
 };
@@ -89,20 +125,39 @@ export const getTransferEvents = async (provider: ethers.Provider) => {
   return await token.queryFilter(filter);
 };
 
+// Verifier custom error selectors (from UltraVerifier.sol)
+const VERIFIER_ERRORS: Record<string, string> = {
+  [ethers.id('ProofLengthWrong()').slice(0, 10)]: 'Proof length wrong — bb.js version may not match deployed verifier',
+  [ethers.id('ProofLengthWrongWithLogN(uint256,uint256,uint256)').slice(0, 10)]: 'Proof length wrong (with details)',
+  [ethers.id('PublicInputsLengthWrong()').slice(0, 10)]: 'Public inputs count wrong — expected 5',
+  [ethers.id('SumcheckFailed()').slice(0, 10)]: 'Sumcheck failed — proof hash mismatch (poseidon2 vs keccak)',
+  [ethers.id('ShpleminiFailed()').slice(0, 10)]: 'Shplemini verification failed',
+  [ethers.id('GeminiChallengeInSubgroup()').slice(0, 10)]: 'Gemini challenge in subgroup',
+  [ethers.id('ConsistencyCheckFailed()').slice(0, 10)]: 'Consistency check failed',
+};
+
 // === ERROR HANDLING ===
 const ERROR_MESSAGES: Record<string, string> = {
-  'Not issuer': 'Only the bank can perform this action',
-  'Root mismatch': 'Merkle root is outdated — ask the bank to update',
-  'Invalid proof': 'ZK proof verification failed — try regenerating',
-  'Insufficient balance': 'Not enough tokens for this transfer',
+  'KT: not issuer': 'Only the bank (issuer) can perform this action',
+  'KT: paused': 'Token contract is currently paused',
+  'KT: invalid proof': 'ZK proof verification failed — try regenerating',
+  'KT: transfer amount': 'Transfer amount exceeds proof limit',
+  'KT: sender mismatch': 'Proof sender does not match your wallet',
+  'KT: recipient mismatch': 'Proof recipient does not match the target address',
+  'KT: root mismatch': 'Merkle root is outdated — ask the bank to update',
+  'KT: nullifier used': 'This proof has already been used — generate a new one',
   'Not admin': 'Only the admin can update the Merkle root',
+  'Insufficient balance': 'Not enough tokens for this transfer',
   'user rejected': 'Transaction rejected in wallet',
+  'insufficient funds': 'Not enough ETH for gas fees',
 };
 
 export const getErrorMessage = (error: any): string => {
   const msg = error?.reason || error?.message || String(error);
+  // Always log full error for debugging
+  console.error('[Keter] Contract error:', msg, error);
   for (const [key, value] of Object.entries(ERROR_MESSAGES)) {
     if (msg.includes(key)) return value;
   }
-  return 'An unexpected error occurred';
+  return `An unexpected error occurred: ${msg.slice(0, 120)}`;
 };
