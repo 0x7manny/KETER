@@ -68,13 +68,47 @@ export const transferWithProof = async (
   const pubInputsBytes32 = publicInputs.map(
     input => '0x' + BigInt(input).toString(16).padStart(64, '0')
   );
+  const rawAmount = BigInt(amount);
+
+  // Pre-flight: check proof length matches on-chain verifier expectation (258 field elements for LOG_N=14)
+  const EXPECTED_PROOF_BYTES = 258 * 32; // 8256 bytes
+  if (proof.length !== EXPECTED_PROOF_BYTES) {
+    throw new Error(
+      `Proof length mismatch: got ${proof.length} bytes, expected ${EXPECTED_PROOF_BYTES}. ` +
+      `bb.js version may be incompatible with the deployed verifier.`
+    );
+  }
+
+  // Dry-run via raw provider.call with high gas limit (Honk verifier needs ~5-10M gas)
+  const from = await signer.getAddress();
+  const calldata = token.interface.encodeFunctionData('transferWithProof', [
+    to, rawAmount, proof, pubInputsBytes32,
+  ]);
+  try {
+    await signer.provider!.call({
+      to: CONTRACTS.ZK_TOKEN,
+      data: calldata,
+      from,
+      gasLimit: 30_000_000n,
+    });
+  } catch (staticErr: any) {
+    const reason = staticErr?.reason || staticErr?.revert?.args?.[0] || '';
+    // Try to decode verifier custom errors from raw revert data
+    const errData = staticErr?.data || staticErr?.error?.data;
+    let decoded = '';
+    if (errData && typeof errData === 'string' && errData.length >= 10) {
+      const sel = errData.slice(0, 10);
+      decoded = VERIFIER_ERRORS[sel] || `Unknown verifier error: ${sel}`;
+    }
+    const msg = decoded || reason || staticErr?.message || 'transferWithProof reverted (no reason)';
+    console.error('[Keter] staticCall revert:', msg, { reason, errData, staticErr });
+    throw new Error(msg);
+  }
+
   // Raw integer amount — must match publicInputs[4] from the ZK proof exactly
-  const tx = await token.transferWithProof(
-    to,
-    BigInt(amount),
-    proof,
-    pubInputsBytes32
-  );
+  const tx = await token.transferWithProof(to, rawAmount, proof, pubInputsBytes32, {
+    gasLimit: 10_000_000n,
+  });
   await tx.wait();
   return tx;
 };
@@ -89,6 +123,17 @@ export const getTransferEvents = async (provider: ethers.Provider) => {
   const token = getZKToken(provider);
   const filter = token.filters.Transfer();
   return await token.queryFilter(filter);
+};
+
+// Verifier custom error selectors (from UltraVerifier.sol)
+const VERIFIER_ERRORS: Record<string, string> = {
+  [ethers.id('ProofLengthWrong()').slice(0, 10)]: 'Proof length wrong — bb.js version may not match deployed verifier',
+  [ethers.id('ProofLengthWrongWithLogN(uint256,uint256,uint256)').slice(0, 10)]: 'Proof length wrong (with details)',
+  [ethers.id('PublicInputsLengthWrong()').slice(0, 10)]: 'Public inputs count wrong — expected 5',
+  [ethers.id('SumcheckFailed()').slice(0, 10)]: 'Sumcheck failed — proof hash mismatch (poseidon2 vs keccak)',
+  [ethers.id('ShpleminiFailed()').slice(0, 10)]: 'Shplemini verification failed',
+  [ethers.id('GeminiChallengeInSubgroup()').slice(0, 10)]: 'Gemini challenge in subgroup',
+  [ethers.id('ConsistencyCheckFailed()').slice(0, 10)]: 'Consistency check failed',
 };
 
 // === ERROR HANDLING ===

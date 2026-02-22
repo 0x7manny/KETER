@@ -44,9 +44,11 @@ export const useProof = () => {
       setProofStep(2);
       const { witness } = await noirRef.current.execute(inputs);
 
-      // Step 3: Finalize proof
+      // Step 3: Finalize proof (target: 'evm' → keccak hash to match on-chain verifier)
       setProofStep(3);
-      const proof = await backendRef.current.generateProof(witness);
+      const proof = await backendRef.current.generateProof(witness, {
+        verifierTarget: 'evm',
+      });
 
       return proof;
     } catch (err: any) {
