@@ -1,0 +1,51 @@
+'use client';
+
+import React from 'react';
+import { ethers } from 'ethers';
+import GlowCard from '../ui/GlowCard';
+import { WalletState } from '../../hooks/useWallet';
+import { useBalance } from '../../hooks/useBalance';
+
+interface BalanceProps {
+  wallet: WalletState;
+}
+
+export function Balance({ wallet }: BalanceProps) {
+  const { balance, loading, refresh } = useBalance(wallet.provider, wallet.address);
+
+  const formatBalance = (bal: bigint): string => {
+    const formatted = ethers.formatUnits(bal, 18);
+    const num = parseFloat(formatted);
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  return (
+    <GlowCard>
+      <p className="text-keter-text-muted text-xs uppercase tracking-wide mb-1">
+        Your Balance
+      </p>
+      <div className="flex items-baseline">
+        <span
+          className={`font-serif text-4xl text-keter-text ${
+            loading ? 'animate-pulse' : ''
+          }`}
+        >
+          {formatBalance(balance)}
+        </span>
+        <span className="text-keter-text-muted text-lg ml-2">KETER</span>
+      </div>
+      <button
+        onClick={refresh}
+        disabled={loading}
+        className="mt-3 text-keter-accent text-xs font-sans font-medium hover:underline disabled:opacity-50"
+      >
+        {loading ? 'Refreshing...' : 'Refresh'}
+      </button>
+    </GlowCard>
+  );
+}
+
+export default Balance;

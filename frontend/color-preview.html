@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KETER — Color Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f5f5f7;
+      color: #1d1d1f;
+      font-family: 'Inter', system-ui, sans-serif;
+      padding: 40px;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 48px;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+    }
+
+    h2 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 28px;
+      margin-bottom: 20px;
+      margin-top: 40px;
+    }
+
+    .subtitle {
+      color: #6e6e73;
+      font-size: 18px;
+      margin-bottom: 48px;
+    }
+
+    /* Color swatches */
+    .section { margin-bottom: 48px; }
+
+    .swatches {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .swatch {
+      width: 140px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      border: 1px solid #e8e8ed;
+    }
+
+    .swatch-color {
+      height: 80px;
+    }
+
+    .swatch-info {
+      background: #fff;
+      padding: 10px 12px;
+    }
+
+    .swatch-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .swatch-hex {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #6e6e73;
+      margin-top: 2px;
+    }
+
+    /* Cards */
+    .card {
+      background: #ffffff;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      max-width: 480px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+      border-color: #aeaeb2;
+    }
+
+    .card h3 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      color: #6e6e73;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .card .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #aeaeb2;
+      background: #f5f5f7;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    /* Buttons */
+    .buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: #059669;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #047857; }
+
+    .btn-secondary {
+      background: #1d1d1f;
+      color: #fff;
+    }
+    .btn-secondary:hover { background: #000; }
+
+    .btn-outline {
+      background: transparent;
+      color: #1d1d1f;
+      border: 1px solid #d2d2d7;
+    }
+    .btn-outline:hover {
+      background: #f5f5f7;
+      border-color: #aeaeb2;
+    }
+
+    .btn-ghost {
+      background: #d1fae5;
+      color: #059669;
+    }
+    .btn-ghost:hover { background: #a7f3d0; }
+
+    /* Badges */
+    .badges { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+    .badge {
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-success { background: #d1fae5; color: #059669; }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .badge-error   { background: #fee2e2; color: #dc2626; }
+    .badge-info    { background: #dbeafe; color: #2563eb; }
+    .badge-neutral { background: #eeeef0; color: #6e6e73; }
+
+    /* Typography */
+    .typo-demo { margin-top: 16px; }
+    .typo-demo > * { margin-bottom: 12px; }
+
+    .text-secondary { color: #6e6e73; }
+    .text-muted { color: #aeaeb2; }
+
+    .cards-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* Header mock */
+    .header-mock {
+      background: #ffffff;
+      border: 1px solid #e8e8ed;
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .header-mock .logo {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 24px;
+      color: #1d1d1f;
+      letter-spacing: -0.5px;
+    }
+
+    .header-mock .logo span {
+      color: #059669;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .input-demo {
+      background: #ffffff;
+      border: 1px solid #d2d2d7;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: #1d1d1f;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 280px;
+    }
+
+    .input-demo:focus {
+      border-color: #059669;
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    }
+
+    .input-demo::placeholder { color: #aeaeb2; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border: 1px solid #e8e8ed;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #aeaeb2;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 32px;
+      color: #1d1d1f;
+    }
+
+    .stat-change {
+      font-size: 12px;
+      color: #059669;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header mock -->
+  <div class="header-mock">
+    <div>
+      <div class="logo">K<span>.</span> Keter</div>
+    </div>
+    <div class="header-right">
+      <span class="badge badge-success">Bank</span>
+      <span class="mono" style="font-size: 13px;">0xA3f1...8d2E</span>
+      <button class="btn btn-outline" style="padding: 6px 14px; font-size: 13px;">Disconnect</button>
+    </div>
+  </div>
+
+  <h1>Keter Design System</h1>
+  <p class="subtitle">Privacy-Preserving Compliance for Security Tokens</p>
+
+  <!-- Backgrounds -->
+  <div class="section">
+    <h2>Backgrounds</h2>
+    <div class="swatches">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #f5f5f7;"></div>
+        <div class="swatch-info"><div class="swatch-name">bg</div><div class="swatch-hex">#f5f5f7</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #ffffff;"></div>
+        <div class="swatch-info"><div class="swatch-name">surface / card</div><div class="swatch-hex">#ffffff</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #eeeef0;"></div>
+        <div class="swatch-info"><div class="swatch-name">secondary</div><div class="swatch-hex">#eeeef0</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #fafafa;"></div>
+        <div class="swatch-info"><div class="swatch-name">card-hover</div><div class="swatch-hex">#fafafa</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Borders -->
+  <div class="section">
+    <h2>Borders</h2>
+    <div class="swatches">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #d2d2d7;"></div>
+        <div class="swatch-info"><div class="swatch-name">border</div><div class="swatch-hex">#d2d2d7</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #e8e8ed;"></div>
+        <div class="swatch-info"><div class="swatch-name">border-light</div><div class="swatch-hex">#e8e8ed</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Text -->
+  <div class="section">
+    <h2>Text</h2>
+    <div class="swatches">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #1d1d1f;"></div>
+        <div class="swatch-info"><div class="swatch-name">text</div><div class="swatch-hex">#1d1d1f</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #6e6e73;"></div>
+        <div class="swatch-info"><div class="swatch-name">text-secondary</div><div class="swatch-hex">#6e6e73</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #aeaeb2;"></div>
+        <div class="swatch-info"><div class="swatch-name">text-muted</div><div class="swatch-hex">#aeaeb2</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accents & Semantic -->
+  <div class="section">
+    <h2>Accents &amp; Semantic</h2>
+    <div class="swatches">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #059669;"></div>
+        <div class="swatch-info"><div class="swatch-name">accent (emerald)</div><div class="swatch-hex">#059669</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #047857;"></div>
+        <div class="swatch-info"><div class="swatch-name">accent-hover</div><div class="swatch-hex">#047857</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #d1fae5;"></div>
+        <div class="swatch-info"><div class="swatch-name">accent-light</div><div class="swatch-hex">#d1fae5</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #d97706;"></div>
+        <div class="swatch-info"><div class="swatch-name">warning</div><div class="swatch-hex">#d97706</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #dc2626;"></div>
+        <div class="swatch-info"><div class="swatch-name">error</div><div class="swatch-hex">#dc2626</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #2563eb;"></div>
+        <div class="swatch-info"><div class="swatch-name">info</div><div class="swatch-hex">#2563eb</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Typography -->
+  <div class="section">
+    <h2>Typography</h2>
+    <div class="typo-demo">
+      <h1 style="font-size: 40px;">DM Serif Display — Headings</h1>
+      <p style="font-size: 16px; line-height: 1.6;">Inter — Body text. Clean, readable, professional. Privacy-preserving compliance for security tokens means you no longer have to choose between compliance and privacy.</p>
+      <p class="text-secondary" style="font-size: 14px;">Inter — Secondary text for descriptions and metadata.</p>
+      <p class="text-muted" style="font-size: 13px;">Inter — Muted text for timestamps and less important info.</p>
+      <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #6e6e73; background: #eeeef0; display: inline-block; padding: 6px 12px; border-radius: 6px;">JetBrains Mono — 0xA3f18c...4d2E  |  Merkle Root: 0x7f3a9d2c</p>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="section">
+    <h2>Buttons</h2>
+    <div class="buttons">
+      <button class="btn btn-primary">Approve Investor</button>
+      <button class="btn btn-secondary">Connect Wallet</button>
+      <button class="btn btn-outline">Cancel</button>
+      <button class="btn btn-ghost">ZK Verified</button>
+    </div>
+  </div>
+
+  <!-- Badges -->
+  <div class="section">
+    <h2>Badges</h2>
+    <div class="badges">
+      <span class="badge badge-success">Approved</span>
+      <span class="badge badge-warning">Pending</span>
+      <span class="badge badge-error">Rejected</span>
+      <span class="badge badge-info">Bank</span>
+      <span class="badge badge-neutral">Explorer</span>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="section">
+    <h2>Inputs</h2>
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <input class="input-demo" placeholder="0x... recipient address" />
+      <input class="input-demo" placeholder="Amount" style="width: 140px;" />
+      <button class="btn btn-primary">Transfer</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section">
+    <h2>Stat Cards</h2>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Supply</div>
+        <div class="stat-value">1,000,000</div>
+        <div class="stat-change">KETER</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Investors</div>
+        <div class="stat-value">3/16</div>
+        <div class="stat-change">Approved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Merkle Root</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #6e6e73; margin-top: 8px;">0x7f3a...9d2c</div>
+        <div class="stat-change">On-chain</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card example -->
+  <div class="section">
+    <h2>Cards</h2>
+    <div class="cards-row">
+      <div class="card">
+        <h3>Transfer Tokens</h3>
+        <p>Send KETER tokens with a zero-knowledge proof of compliance. Your KYC data stays private — only the proof is verified on-chain.</p>
+        <span class="mono">transferWithProof(to, amount, proof)</span>
+        <div class="buttons">
+          <button class="btn btn-primary">Generate Proof & Transfer</button>
+          <button class="btn btn-outline">View History</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>KYC Request</h3>
+        <p>Submit your compliance credentials. The bank will verify and add you to the Merkle tree — no personal data is stored on-chain.</p>
+        <div class="badges" style="margin-bottom: 16px;">
+          <span class="badge badge-warning">Pending Review</span>
+        </div>
+        <div class="buttons">
+          <button class="btn btn-secondary">Submit KYC</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
