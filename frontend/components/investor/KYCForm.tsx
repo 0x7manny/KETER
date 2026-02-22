@@ -9,7 +9,6 @@ import {
   submitKYCRequest,
   getKYCRequests,
   COUNTRIES,
-  INVESTOR_TYPES,
   KYCRequest,
 } from '../../utils/credentials';
 
@@ -23,7 +22,6 @@ export function KYCForm({ wallet }: KYCFormProps) {
   const [age, setAge] = useState('');
   const [physicalAddress, setPhysicalAddress] = useState('');
   const [country, setCountry] = useState<number>(0);
-  const [investorType, setInvestorType] = useState<number>(0);
   const [submitted, setSubmitted] = useState(false);
   const [existingRequest, setExistingRequest] = useState<KYCRequest | null>(
     null
@@ -43,7 +41,7 @@ export function KYCForm({ wallet }: KYCFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !surname.trim() || !age || !physicalAddress.trim() || !country || !investorType) return;
+    if (!name.trim() || !surname.trim() || !age || !physicalAddress.trim() || !country) return;
 
     submitKYCRequest({
       address: wallet.address!,
@@ -52,7 +50,7 @@ export function KYCForm({ wallet }: KYCFormProps) {
       age: parseInt(age),
       physicalAddress: physicalAddress.trim(),
       country,
-      investorType,
+      investorType: 0, // Set by the bank during approval
       timestamp: Date.now(),
       status: 'pending',
     });
@@ -211,28 +209,6 @@ export function KYCForm({ wallet }: KYCFormProps) {
           />
         </div>
 
-        {/* Investor Type */}
-        <div>
-          <label className="block text-xs font-sans font-medium text-keter-text-secondary mb-1.5">
-            Investor Type
-          </label>
-          <select
-            value={investorType}
-            onChange={(e) => setInvestorType(Number(e.target.value))}
-            required
-            className={inputClassName}
-          >
-            <option value={0} disabled>
-              Select investor type
-            </option>
-            {Object.entries(INVESTOR_TYPES).map(([code, label]) => (
-              <option key={code} value={code}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* Wallet address (read-only, from MetaMask) */}
         <div>
           <label className="block text-xs font-sans font-medium text-keter-text-secondary mb-1.5">
@@ -247,7 +223,7 @@ export function KYCForm({ wallet }: KYCFormProps) {
           type="submit"
           variant="primary"
           className="w-full"
-          disabled={!name.trim() || !surname.trim() || !age || !physicalAddress.trim() || !country || !investorType}
+          disabled={!name.trim() || !surname.trim() || !age || !physicalAddress.trim() || !country}
         >
           Submit KYC Request
         </NeonButton>

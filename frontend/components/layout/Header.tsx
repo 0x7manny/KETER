@@ -33,6 +33,15 @@ export default function Header({ wallet }: HeaderProps) {
 
         {/* Nav + Wallet */}
         <div className="flex items-center gap-4">
+          {wallet.role === 'bank' ? (
+            <Link href="/admin" className="text-sm text-keter-accent font-medium hover:text-keter-text transition-colors">
+              Admin
+            </Link>
+          ) : (
+            <Link href="/dashboard" className="text-sm text-keter-text-secondary hover:text-keter-text transition-colors">
+              Dashboard
+            </Link>
+          )}
           <Link href="/docs/architecture" className="text-sm text-keter-text-secondary hover:text-keter-text transition-colors">
             Docs
           </Link>

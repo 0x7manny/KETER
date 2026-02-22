@@ -33,7 +33,9 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
   const [requests, setRequests] = useState<KYCRequest[]>([]);
   const [processingAddress, setProcessingAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [credentialExport, setCredentialExport] = useState<string | null>(null);
   const [maxAmounts, setMaxAmounts] = useState<Record<string, string>>({});
+  const [investorTypes, setInvestorTypes] = useState<Record<string, number>>({});
   const { addLeaf, getRoot } = useMerkleTree();
 
   const refreshRequests = useCallback(() => {
@@ -48,21 +50,34 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
     setMaxAmounts(prev => ({ ...prev, [address]: value }));
   };
 
+  const handleInvestorTypeChange = (address: string, value: number) => {
+    setInvestorTypes(prev => ({ ...prev, [address]: value }));
+  };
+
   const handleApprove = async (request: KYCRequest) => {
     const maxAmount = maxAmounts[request.address];
+    const investorType = investorTypes[request.address];
     if (!maxAmount || Number(maxAmount) <= 0) {
       setError('Please set a valid max transfer amount before approving');
+      return;
+    }
+    if (!investorType) {
+      setError('Please select an investor type before approving');
       return;
     }
 
     setProcessingAddress(request.address);
     setError(null);
 
-    const result = await approveInvestor(wallet, request, maxAmount, addLeaf, getRoot);
+    // Bank defines investorType — override whatever the investor submitted
+    const bankRequest = { ...request, investorType };
+    const result = await approveInvestor(wallet, bankRequest, maxAmount, addLeaf, getRoot);
 
-    if (result.success) {
+    if (result.success && result.credentials) {
+      // Show credentials for secure transmission to investor
+      setCredentialExport(JSON.stringify(result.credentials));
       refreshRequests();
-    } else {
+    } else if (!result.success) {
       setError(result.error || 'Failed to approve investor');
     }
 
@@ -81,6 +96,39 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200">
           <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {/* Credential export — send securely to investor */}
+      {credentialExport && (
+        <div className="mb-4 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+          <p className="text-sm font-medium text-emerald-800 mb-2">
+            Investor approved. Send these credentials securely:
+          </p>
+          <textarea
+            readOnly
+            value={credentialExport}
+            rows={4}
+            className="w-full px-3 py-2 rounded border border-emerald-300 bg-white font-mono text-xs text-keter-text mb-2"
+          />
+          <div className="flex gap-2">
+            <NeonButton
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(credentialExport);
+              }}
+            >
+              Copy to Clipboard
+            </NeonButton>
+            <NeonButton
+              variant="secondary"
+              size="sm"
+              onClick={() => setCredentialExport(null)}
+            >
+              Dismiss
+            </NeonButton>
+          </div>
         </div>
       )}
 
@@ -113,32 +161,46 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
                   </span>
                 </div>
 
-                {/* Details row */}
+                {/* Investor details */}
                 <div className="flex flex-wrap gap-2 text-xs text-keter-text-secondary mb-3">
                   <span className="px-2 py-0.5 bg-white rounded border border-keter-border-light">
                     {COUNTRIES[request.country] || 'Unknown'}
-                  </span>
-                  <span className="px-2 py-0.5 bg-white rounded border border-keter-border-light">
-                    {INVESTOR_TYPES[request.investorType] || 'Unknown'}
                   </span>
                   <span className="px-2 py-0.5 bg-white rounded border border-keter-border-light">
                     Age: {request.age}
                   </span>
                 </div>
 
-                {/* Max Amount input (bank-set) */}
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-keter-text-secondary mb-1">
-                    Max Transfer Amount (tokens)
-                  </label>
-                  <input
-                    type="number"
-                    value={maxAmounts[request.address] || ''}
-                    onChange={(e) => handleMaxAmountChange(request.address, e.target.value)}
-                    placeholder="e.g. 100000"
-                    min="1"
-                    className="w-full px-3 py-1.5 rounded-lg border border-keter-border-light bg-white font-mono text-sm text-keter-text placeholder:text-keter-text-muted focus:outline-none focus:border-keter-accent focus:ring-1 focus:ring-keter-accent/20 transition-colors"
-                  />
+                {/* Bank-defined fields: Investor Type + Max Amount */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-keter-text-secondary mb-1">
+                      Investor Type
+                    </label>
+                    <select
+                      value={investorTypes[request.address] || 0}
+                      onChange={(e) => handleInvestorTypeChange(request.address, Number(e.target.value))}
+                      className="w-full px-3 py-1.5 rounded-lg border border-keter-border-light bg-white text-sm text-keter-text focus:outline-none focus:border-keter-accent focus:ring-1 focus:ring-keter-accent/20 transition-colors"
+                    >
+                      <option value={0} disabled>Select type</option>
+                      {Object.entries(INVESTOR_TYPES).map(([code, label]) => (
+                        <option key={code} value={code}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-keter-text-secondary mb-1">
+                      Max Transfer Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={maxAmounts[request.address] || ''}
+                      onChange={(e) => handleMaxAmountChange(request.address, e.target.value)}
+                      placeholder="e.g. 100000"
+                      min="1"
+                      className="w-full px-3 py-1.5 rounded-lg border border-keter-border-light bg-white font-mono text-sm text-keter-text placeholder:text-keter-text-muted focus:outline-none focus:border-keter-accent focus:ring-1 focus:ring-keter-accent/20 transition-colors"
+                    />
+                  </div>
                 </div>
 
                 {/* Action buttons */}
@@ -147,7 +209,7 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
                     variant="primary"
                     size="sm"
                     loading={isProcessing}
-                    disabled={isProcessing || !maxAmounts[request.address]}
+                    disabled={isProcessing || !maxAmounts[request.address] || !investorTypes[request.address]}
                     onClick={() => handleApprove(request)}
                   >
                     Approve

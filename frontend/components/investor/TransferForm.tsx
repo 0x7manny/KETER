@@ -140,7 +140,7 @@ export function TransferForm({ wallet }: TransferFormProps) {
         zkVerified: true,
       });
 
-      setSuccess(`Transfer successful! Tx: ${tx.hash}`);
+      setSuccess(`Transferred ${amount} KETER to ${to.slice(0, 8)}...${to.slice(-6)} — Tx: ${tx.hash}`);
       setTo('');
       setAmount('');
     } catch (err: any) {
