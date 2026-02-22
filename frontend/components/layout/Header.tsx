@@ -36,6 +36,9 @@ export default function Header({ wallet }: HeaderProps) {
           <Link href="/docs/architecture" className="text-sm text-keter-text-secondary hover:text-keter-text transition-colors">
             Docs
           </Link>
+          <Link href="/setup" className="text-sm text-keter-text-secondary hover:text-keter-text transition-colors">
+            Setup
+          </Link>
           {wallet.address ? (
             <>
               {/* Role badge */}

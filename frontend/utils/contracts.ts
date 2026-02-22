@@ -35,9 +35,10 @@ export const getRegistry = (signerOrProvider: ethers.Signer | ethers.Provider) =
 };
 
 // === BANK ACTIONS ===
-export const mintTokens = async (signer: ethers.Signer, to: string, amount: number) => {
+export const issueTokens = async (signer: ethers.Signer, to: string, amount: number) => {
   const token = getZKToken(signer);
-  const tx = await token.mint(to, ethers.parseUnits(amount.toString(), 18));
+  // Raw integer amount (no decimals) — circuit uses u64, so amounts must stay raw
+  const tx = await token.issue(to, BigInt(amount), '0x');
   await tx.wait();
   return tx;
 };
@@ -67,9 +68,10 @@ export const transferWithProof = async (
   const pubInputsBytes32 = publicInputs.map(
     input => '0x' + BigInt(input).toString(16).padStart(64, '0')
   );
+  // Raw integer amount — must match publicInputs[4] from the ZK proof exactly
   const tx = await token.transferWithProof(
     to,
-    ethers.parseUnits(amount.toString(), 18),
+    BigInt(amount),
     proof,
     pubInputsBytes32
   );
@@ -91,18 +93,26 @@ export const getTransferEvents = async (provider: ethers.Provider) => {
 
 // === ERROR HANDLING ===
 const ERROR_MESSAGES: Record<string, string> = {
-  'Not issuer': 'Only the bank can perform this action',
-  'Root mismatch': 'Merkle root is outdated — ask the bank to update',
-  'Invalid proof': 'ZK proof verification failed — try regenerating',
-  'Insufficient balance': 'Not enough tokens for this transfer',
+  'KT: not issuer': 'Only the bank (issuer) can perform this action',
+  'KT: paused': 'Token contract is currently paused',
+  'KT: invalid proof': 'ZK proof verification failed — try regenerating',
+  'KT: transfer amount': 'Transfer amount exceeds proof limit',
+  'KT: sender mismatch': 'Proof sender does not match your wallet',
+  'KT: recipient mismatch': 'Proof recipient does not match the target address',
+  'KT: root mismatch': 'Merkle root is outdated — ask the bank to update',
+  'KT: nullifier used': 'This proof has already been used — generate a new one',
   'Not admin': 'Only the admin can update the Merkle root',
+  'Insufficient balance': 'Not enough tokens for this transfer',
   'user rejected': 'Transaction rejected in wallet',
+  'insufficient funds': 'Not enough ETH for gas fees',
 };
 
 export const getErrorMessage = (error: any): string => {
   const msg = error?.reason || error?.message || String(error);
+  // Always log full error for debugging
+  console.error('[Keter] Contract error:', msg, error);
   for (const [key, value] of Object.entries(ERROR_MESSAGES)) {
     if (msg.includes(key)) return value;
   }
-  return 'An unexpected error occurred';
+  return `An unexpected error occurred: ${msg.slice(0, 120)}`;
 };

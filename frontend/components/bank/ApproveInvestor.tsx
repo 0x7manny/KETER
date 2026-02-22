@@ -7,17 +7,18 @@ import { publishMerkleRoot, getErrorMessage } from '../../utils/contracts';
 export const approveInvestor = async (
   wallet: WalletState,
   request: KYCRequest,
-  addLeaf: (address: string, countryCode: number, investorType: number) => Promise<InvestorCredentials | null>,
+  maxAmount: string,
+  addLeaf: (request: KYCRequest, wallet: string, maxAmount: string) => Promise<InvestorCredentials | null>,
   getRoot: () => bigint | null,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // 1. Insert investor leaf into the Merkle tree
-    const credentials = await addLeaf(request.address, request.country, request.investorType);
+    // 1. Insert investor leaf into the Merkle tree (full KYC data + bank-set maxAmount)
+    const credentials = await addLeaf(request, request.address, maxAmount);
     if (!credentials) {
       return { success: false, error: 'Failed to add investor to Merkle tree' };
     }
 
-    // 2. Save credentials to localStorage
+    // 2. Save credentials to localStorage (keyed by wallet address)
     saveCredentials(request.address, credentials);
 
     // 3. Get the updated root

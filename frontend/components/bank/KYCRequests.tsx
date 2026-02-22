@@ -33,6 +33,7 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
   const [requests, setRequests] = useState<KYCRequest[]>([]);
   const [processingAddress, setProcessingAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [maxAmounts, setMaxAmounts] = useState<Record<string, string>>({});
   const { addLeaf, getRoot } = useMerkleTree();
 
   const refreshRequests = useCallback(() => {
@@ -43,11 +44,21 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
     refreshRequests();
   }, [refreshRequests]);
 
+  const handleMaxAmountChange = (address: string, value: string) => {
+    setMaxAmounts(prev => ({ ...prev, [address]: value }));
+  };
+
   const handleApprove = async (request: KYCRequest) => {
+    const maxAmount = maxAmounts[request.address];
+    if (!maxAmount || Number(maxAmount) <= 0) {
+      setError('Please set a valid max transfer amount before approving');
+      return;
+    }
+
     setProcessingAddress(request.address);
     setError(null);
 
-    const result = await approveInvestor(wallet, request, addLeaf, getRoot);
+    const result = await approveInvestor(wallet, request, maxAmount, addLeaf, getRoot);
 
     if (result.success) {
       refreshRequests();
@@ -78,31 +89,65 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
           No pending requests
         </p>
       ) : (
-        <div className="space-y-0">
+        <div className="space-y-4">
           {requests.map((request) => {
             const isProcessing = processingAddress === request.address;
 
             return (
               <div
                 key={request.address}
-                className="flex items-center justify-between gap-4 py-3 border-b border-keter-border-light last:border-0"
+                className="p-4 rounded-lg border border-keter-border-light bg-keter-bg"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-sm text-keter-text truncate">
-                    {request.address.slice(0, 8)}...{request.address.slice(-6)}
-                  </p>
-                  <p className="text-xs text-keter-text-secondary mt-0.5">
-                    {COUNTRIES[request.country] || 'Unknown'} &middot;{' '}
-                    {INVESTOR_TYPES[request.investorType] || 'Unknown'} &middot;{' '}
-                    <span className="text-keter-text-muted">{timeAgo(request.timestamp)}</span>
-                  </p>
+                {/* Header row */}
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-keter-text">
+                      {request.name} {request.surname}
+                    </p>
+                    <p className="font-mono text-xs text-keter-text-muted truncate mt-0.5">
+                      {request.address.slice(0, 8)}...{request.address.slice(-6)}
+                    </p>
+                  </div>
+                  <span className="text-xs text-keter-text-muted shrink-0">
+                    {timeAgo(request.timestamp)}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+
+                {/* Details row */}
+                <div className="flex flex-wrap gap-2 text-xs text-keter-text-secondary mb-3">
+                  <span className="px-2 py-0.5 bg-white rounded border border-keter-border-light">
+                    {COUNTRIES[request.country] || 'Unknown'}
+                  </span>
+                  <span className="px-2 py-0.5 bg-white rounded border border-keter-border-light">
+                    {INVESTOR_TYPES[request.investorType] || 'Unknown'}
+                  </span>
+                  <span className="px-2 py-0.5 bg-white rounded border border-keter-border-light">
+                    Age: {request.age}
+                  </span>
+                </div>
+
+                {/* Max Amount input (bank-set) */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-keter-text-secondary mb-1">
+                    Max Transfer Amount (tokens)
+                  </label>
+                  <input
+                    type="number"
+                    value={maxAmounts[request.address] || ''}
+                    onChange={(e) => handleMaxAmountChange(request.address, e.target.value)}
+                    placeholder="e.g. 100000"
+                    min="1"
+                    className="w-full px-3 py-1.5 rounded-lg border border-keter-border-light bg-white font-mono text-sm text-keter-text placeholder:text-keter-text-muted focus:outline-none focus:border-keter-accent focus:ring-1 focus:ring-keter-accent/20 transition-colors"
+                  />
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-2">
                   <NeonButton
                     variant="primary"
                     size="sm"
                     loading={isProcessing}
-                    disabled={isProcessing}
+                    disabled={isProcessing || !maxAmounts[request.address]}
                     onClick={() => handleApprove(request)}
                   >
                     Approve

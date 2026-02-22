@@ -8,7 +8,6 @@ import GlowCard from '../ui/GlowCard';
 import MintForm from './MintForm';
 import KYCRequests from './KYCRequests';
 import InvestorList from './InvestorList';
-import { ethers } from 'ethers';
 
 interface BankDashboardProps {
   wallet: WalletState;
@@ -21,8 +20,9 @@ export function BankDashboard({ wallet }: BankDashboardProps) {
   const root = getRoot();
   const rootHex = root ? '0x' + root.toString(16).padStart(64, '0') : null;
 
+  // Raw integer balance (no decimals — circuit uses u64 amounts)
   const formattedBalance = balance
-    ? parseFloat(ethers.formatUnits(balance, 18)).toLocaleString()
+    ? Number(balance).toLocaleString()
     : '\u2014';
 
   return (

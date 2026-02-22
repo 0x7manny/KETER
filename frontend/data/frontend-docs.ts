@@ -1,28 +1,28 @@
 export const frontendLibraries = {
   headers: ['Library', 'Role', 'Install'],
   rows: [
-    ['@noir-lang/noir_js', 'Loads the compiled circuit, generates proofs in WASM in the browser', 'npm i @noir-lang/noir_js'],
-    ['@noir-lang/backend_barretenberg', 'UltraPlonk backend — the mathematical engine behind proof generation', 'npm i @noir-lang/backend_barretenberg'],
+    ['@noir-lang/noir_js', 'Loads the compiled circuit, generates witnesses in WASM in the browser', 'npm i @noir-lang/noir_js@1.0.0-beta.18'],
+    ['@aztec/bb.js', 'UltraHonk backend — the mathematical engine behind proof generation', 'npm i @aztec/bb.js'],
     ['circomlibjs', 'Poseidon hash bn254 compatible with Noir — must produce the same hashes', 'npm i circomlibjs'],
     ['ethers', 'Blockchain interaction: send the transferWithProof() transaction', 'npm i ethers'],
   ],
 };
 
 export const proofCode = `import { Noir } from '@noir-lang/noir_js';
-import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
-import circuit from '../circuits/target/keter.json';
+import { UltraHonkBackend } from '@aztec/bb.js';
+import circuit from '../circuit/keter_circuit.json';
 
 // Initialize once
-const backend = new BarretenbergBackend(circuit);
-const noir = new Noir(circuit, backend);
+const backend = new UltraHonkBackend(circuit.bytecode);
+const noir = new Noir(circuit);
 
 export async function generateProof(inputs: Record<string, any>) {
-  console.log("Generating ZK proof...");
-  const start = Date.now();
+  // Step 1: Generate witness
+  const { witness } = await noir.execute(inputs);
 
-  const { proof, publicInputs } = await noir.generateProof(inputs);
+  // Step 2: Generate proof from witness
+  const { proof, publicInputs } = await backend.generateProof(witness);
 
-  console.log(\`Proof generated in \${Date.now() - start}ms (\${proof.length} bytes)\`);
   return { proof, publicInputs };
 }`;
 
@@ -34,23 +34,26 @@ export async function initPoseidon() {
   poseidon = await buildPoseidon();
 }
 
-export function hash2(a: string, b: string): string {
-  const h = poseidon([BigInt(a), BigInt(b)]);
-  return poseidon.F.toString(h);
+export function hash2(a: bigint, b: bigint): bigint {
+  const h = poseidon([poseidon.F.e(a), poseidon.F.e(b)]);
+  return BigInt(poseidon.F.toString(h));
 }
 
-export function hash8(inputs: string[]): string {
-  const h = poseidon(inputs.map(x => BigInt(x)));
-  return poseidon.F.toString(h);
+export function hash8(inputs: bigint[]): bigint {
+  const h = poseidon(inputs.map(x => poseidon.F.e(x)));
+  return BigInt(poseidon.F.toString(h));
 }
 
-// Build the complete leaf for an investor
-export function buildLeaf(kyc: KYCData): string {
+// Build the complete leaf for an investor (3-step process)
+export function buildLeaf(kyc: KYCData): bigint {
+  // Step 1: hash_8([name, surname, age, address, wallet, country, type, face])
   const leaf = hash8([
     kyc.name, kyc.surname, kyc.age, kyc.address,
     kyc.wallet, kyc.countryCode, kyc.investorType, kyc.kycFace
   ]);
+  // Step 2: hash_2([leaf, salt])
   const leafInter = hash2(leaf, kyc.salt);
+  // Step 3: hash_2([leaf_inter, max_amount])
   const leafFinal = hash2(leafInter, kyc.maxAmount);
   return leafFinal;
 }`;
@@ -59,21 +62,21 @@ export const merkleCode = `import { hash2 } from './poseidon';
 
 export class MerkleTree {
   depth: number;
-  leaves: string[];
+  leaves: bigint[];
 
   constructor(depth: number) {
     this.depth = depth;
-    this.leaves = Array(2 ** depth).fill("0");
+    this.leaves = Array(2 ** depth).fill(0n);
   }
 
-  insert(index: number, leaf: string) {
+  insert(index: number, leaf: bigint) {
     this.leaves[index] = leaf;
   }
 
-  getRoot(): string {
+  getRoot(): bigint {
     let layer = [...this.leaves];
     for (let d = 0; d < this.depth; d++) {
-      const next: string[] = [];
+      const next: bigint[] = [];
       for (let i = 0; i < layer.length; i += 2) {
         next.push(hash2(layer[i], layer[i + 1]));
       }
@@ -82,17 +85,17 @@ export class MerkleTree {
     return layer[0];
   }
 
-  getPath(index: number): { merklePath: string[], pathIndices: string[] } {
-    const merklePath: string[] = [];
-    const pathIndices: string[] = [];
+  getPath(index: number): { merklePath: bigint[], pathIndices: number[] } {
+    const merklePath: bigint[] = [];
+    const pathIndices: number[] = [];
     let layer = [...this.leaves];
     let idx = index;
     for (let d = 0; d < this.depth; d++) {
       const isRight = idx % 2;
       const sibling = isRight ? idx - 1 : idx + 1;
       merklePath.push(layer[sibling]);
-      pathIndices.push(isRight ? "1" : "0");
-      const next: string[] = [];
+      pathIndices.push(isRight ? 1 : 0);
+      const next: bigint[] = [];
       for (let i = 0; i < layer.length; i += 2)
         next.push(hash2(layer[i], layer[i + 1]));
       layer = next;
