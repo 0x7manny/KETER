@@ -10,14 +10,11 @@ export default function Home() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Called by the modal — does the REAL MetaMask connection
-  const handleConnect = useCallback(async () => {
+  const handleConnect = useCallback(async (providerType?: 'metamask' | 'phantom') => {
     setIsConnecting(true);
-    await wallet.connect(); // MetaMask popup opens here
-    // If wallet.connect() throws, the modal catches it and shows error state
+    await wallet.connect(providerType);
   }, [wallet]);
 
-  // Called AFTER the success animation finishes (2s delay)
   const handleConnectSuccess = useCallback(() => {
     router.push('/dashboard');
   }, [router]);
@@ -32,6 +29,7 @@ export default function Home() {
       onConnectSuccess={handleConnectSuccess}
       onExplore={handleExplore}
       isConnecting={isConnecting}
+      walletAddress={wallet.address}
     />
   );
 }

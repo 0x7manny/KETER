@@ -1,15 +1,35 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { ethers } from 'ethers';
 import { GlowCard } from '../ui/GlowCard';
 import { TransactionList } from './TransactionList';
 import { getTransfers, TransferRecord } from '../../utils/credentials';
+import { CONTRACTS } from '../../utils/contracts';
+import ZKTokenABI from '../../abis/ZKToken.json';
 
 export function Explorer() {
   const [transfers, setTransfers] = useState<TransferRecord[]>([]);
+  const [totalSupply, setTotalSupply] = useState<string | null>(null);
 
   useEffect(() => {
     setTransfers(getTransfers());
+  }, []);
+
+  useEffect(() => {
+    const fetchSupply = async () => {
+      try {
+        const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const token = new ethers.Contract(CONTRACTS.ZK_TOKEN, ZKTokenABI, provider);
+        const supply: bigint = await token.totalSupply();
+        const formatted = ethers.formatUnits(supply, 18);
+        setTotalSupply(Number(formatted).toLocaleString());
+      } catch {
+        setTotalSupply('\u2014');
+      }
+    };
+    fetchSupply();
   }, []);
 
   const totalTransfers = transfers.length;
@@ -20,10 +40,12 @@ export function Explorer() {
       {/* ── Hero ── */}
       <div className="mb-8">
         <h1 className="font-serif text-3xl text-keter-text mb-2">
-          Public Explorer
+          Public Ledger
         </h1>
-        <p className="text-keter-text-secondary text-sm">
-          Verify transactions and proofs &mdash; no identity data exposed
+        <p className="text-keter-text-secondary text-sm leading-relaxed max-w-2xl">
+          This is an intentionally limited view. You can verify that transfers
+          happened and that every sender passed compliance — but you cannot see
+          who they are. That&apos;s the whole point.
         </p>
       </div>
 
@@ -46,13 +68,14 @@ export function Explorer() {
           </div>
           <div>
             <h2 className="font-serif text-lg text-keter-text">
-              Zero-Knowledge Compliance Active
+              Why is this view so limited?
             </h2>
             <p className="text-keter-text-secondary text-sm mt-1 leading-relaxed">
-              Every transfer on this ledger includes a cryptographic proof that
-              the sender is compliant. But the proof reveals nothing about their
-              identity, country, or KYC status. This is privacy-preserving
-              compliance.
+              By design. Every transfer carries a zero-knowledge proof that the
+              sender passed KYC — but the proof itself reveals nothing about
+              their identity, country, investor type, or compliance details.
+              Only the issuing bank holds that information. The public ledger
+              guarantees compliance without exposing private data.
             </p>
           </div>
         </div>
@@ -60,10 +83,10 @@ export function Explorer() {
         <div className="grid grid-cols-2 gap-6 pt-3 border-t border-keter-border-light">
           <div>
             <h3 className="text-xs uppercase tracking-wide text-keter-text-muted font-sans mb-2">
-              What you CAN see
+              Public data (on-chain)
             </h3>
             <ul className="space-y-1">
-              {['Transfers', 'Amounts', 'Proof validity'].map((item) => (
+              {['Wallet addresses', 'Transfer amounts', 'ZK proof validity', 'Transaction hashes'].map((item) => (
                 <li
                   key={item}
                   className="text-sm text-keter-accent flex items-center gap-1.5"
@@ -76,13 +99,14 @@ export function Explorer() {
           </div>
           <div>
             <h3 className="text-xs uppercase tracking-wide text-keter-text-muted font-sans mb-2">
-              What you CANNOT see
+              Hidden by ZK proofs
             </h3>
             <ul className="space-y-1">
               {[
-                'Investor identities',
-                'KYC data',
-                'Whitelist membership',
+                'Real identities (name, age)',
+                'Country & jurisdiction',
+                'Investor type & limits',
+                'Merkle tree position',
               ].map((item) => (
                 <li
                   key={item}
@@ -98,7 +122,16 @@ export function Explorer() {
       </GlowCard>
 
       {/* ── Stats Bar ── */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <GlowCard padding="sm" hover={false}>
+          <p className="text-keter-text-muted text-xs uppercase tracking-wide font-sans mb-1">
+            Total Supply
+          </p>
+          <p className="text-2xl font-serif text-keter-text">
+            {totalSupply ?? '\u2014'}
+          </p>
+          <p className="text-keter-text-muted text-xs mt-0.5">KETER</p>
+        </GlowCard>
         <GlowCard padding="sm" hover={false}>
           <p className="text-keter-text-muted text-xs uppercase tracking-wide font-sans mb-1">
             Total Transfers
@@ -115,6 +148,11 @@ export function Explorer() {
 
       {/* ── Transaction List ── */}
       <TransactionList />
+
+      {/* ── Footer note ── */}
+      <p className="text-center text-xs text-keter-text-muted mt-6 mb-2">
+        Banks and issuers have access to a detailed compliance view with full investor data.
+      </p>
     </div>
   );
 }

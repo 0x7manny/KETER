@@ -33,7 +33,6 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
   const [requests, setRequests] = useState<KYCRequest[]>([]);
   const [processingAddress, setProcessingAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [credentialExport, setCredentialExport] = useState<string | null>(null);
   const [maxAmounts, setMaxAmounts] = useState<Record<string, string>>({});
   const [investorTypes, setInvestorTypes] = useState<Record<string, number>>({});
   const { addLeaf, getRoot } = useMerkleTree();
@@ -73,11 +72,9 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
     const bankRequest = { ...request, investorType };
     const result = await approveInvestor(wallet, bankRequest, maxAmount, addLeaf, getRoot);
 
-    if (result.success && result.credentials) {
-      // Show credentials for secure transmission to investor
-      setCredentialExport(JSON.stringify(result.credentials));
+    if (result.success) {
       refreshRequests();
-    } else if (!result.success) {
+    } else {
       setError(result.error || 'Failed to approve investor');
     }
 
@@ -96,39 +93,6 @@ export function KYCRequests({ wallet }: KYCRequestsProps) {
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200">
           <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
-      {/* Credential export — send securely to investor */}
-      {credentialExport && (
-        <div className="mb-4 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
-          <p className="text-sm font-medium text-emerald-800 mb-2">
-            Investor approved. Send these credentials securely:
-          </p>
-          <textarea
-            readOnly
-            value={credentialExport}
-            rows={4}
-            className="w-full px-3 py-2 rounded border border-emerald-300 bg-white font-mono text-xs text-keter-text mb-2"
-          />
-          <div className="flex gap-2">
-            <NeonButton
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(credentialExport);
-              }}
-            >
-              Copy to Clipboard
-            </NeonButton>
-            <NeonButton
-              variant="secondary"
-              size="sm"
-              onClick={() => setCredentialExport(null)}
-            >
-              Dismiss
-            </NeonButton>
-          </div>
         </div>
       )}
 

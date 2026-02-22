@@ -23,7 +23,7 @@ export default function AdminPage() {
             </p>
             <button
               onClick={wallet.connect}
-              className="bg-keter-text text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-black transition"
+              className="bg-keter-accent text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-emerald-700 transition"
             >
               Connect Wallet
             </button>

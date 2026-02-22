@@ -1,14 +1,24 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
 import { WalletState } from '../../hooks/useWallet';
 import { useMerkleTree } from '../../hooks/useMerkleTree';
 import { useBalance } from '../../hooks/useBalance';
 import GlowCard from '../ui/GlowCard';
+import { CONTRACTS } from '../../utils/contracts';
+import ZKTokenABI from '../../abis/ZKToken.json';
 import MintForm from './MintForm';
 import KYCRequests from './KYCRequests';
 import InvestorList from './InvestorList';
+import AdminExplorer from './AdminExplorer';
 import { getRootHistory, RootHistoryEntry } from './ApproveInvestor';
+import {
+  getPendingBankRegistrations,
+  updateBankRegistrationStatus,
+  BankRegistration,
+  COUNTRIES,
+} from '../../utils/credentials';
 
 interface BankDashboardProps {
   wallet: WalletState;
@@ -18,10 +28,34 @@ export function BankDashboard({ wallet }: BankDashboardProps) {
   const { leafCount, getRoot, loading: treeLoading } = useMerkleTree();
   const { balance } = useBalance(wallet.provider, wallet.address);
   const [rootHistory, setRootHistory] = useState<RootHistoryEntry[]>([]);
+  const [bankRequests, setBankRequests] = useState<BankRegistration[]>([]);
+  const [totalSupply, setTotalSupply] = useState<string | null>(null);
 
   useEffect(() => {
     setRootHistory(getRootHistory());
   }, [leafCount]); // Refresh when tree changes
+
+  useEffect(() => {
+    if (wallet.isDeployer) {
+      setBankRequests(getPendingBankRegistrations());
+    }
+  }, [wallet.isDeployer]);
+
+  useEffect(() => {
+    const fetchSupply = async () => {
+      try {
+        const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const token = new ethers.Contract(CONTRACTS.ZK_TOKEN, ZKTokenABI, provider);
+        const supply: bigint = await token.totalSupply();
+        const formatted = ethers.formatUnits(supply, 18);
+        setTotalSupply(Number(formatted).toLocaleString());
+      } catch {
+        setTotalSupply('\u2014');
+      }
+    };
+    fetchSupply();
+  }, []);
 
   const root = getRoot();
   const rootHex = root ? '0x' + root.toString(16).padStart(64, '0') : null;
@@ -44,7 +78,7 @@ export function BankDashboard({ wallet }: BankDashboardProps) {
           <p className="text-keter-text-secondary text-xs uppercase tracking-wide mb-1">
             Total Supply
           </p>
-          <p className="font-serif text-2xl text-keter-text">{formattedBalance}</p>
+          <p className="font-serif text-2xl text-keter-text">{totalSupply ?? formattedBalance}</p>
           <p className="text-keter-text-muted text-xs mt-0.5">KETER</p>
         </GlowCard>
 
@@ -70,6 +104,60 @@ export function BankDashboard({ wallet }: BankDashboardProps) {
             <p className="text-keter-text-muted text-sm mt-1">Not published</p>
           )}
         </GlowCard>
+      </div>
+
+      {/* Bank Registrations — deployer only */}
+      {wallet.isDeployer && bankRequests.length > 0 && (
+        <GlowCard>
+          <h2 className="font-serif text-xl mb-4 text-keter-text">
+            Pending Bank Registrations
+          </h2>
+          <div className="space-y-3">
+            {bankRequests.map((req) => (
+              <div
+                key={req.address}
+                className="flex items-center justify-between p-4 rounded-lg border border-keter-border-light bg-keter-bg"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-keter-text">
+                    {req.institutionName}
+                  </p>
+                  <p className="text-xs text-keter-text-secondary mt-0.5">
+                    {COUNTRIES[req.country]} &middot; Reg. {req.registrationNumber}
+                  </p>
+                  <p className="text-xs text-keter-text-muted font-mono mt-0.5">
+                    {req.address}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0 ml-4">
+                  <button
+                    onClick={() => {
+                      updateBankRegistrationStatus(req.address, 'approved');
+                      setBankRequests(getPendingBankRegistrations());
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-keter-accent border border-emerald-200 hover:bg-emerald-100 transition"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateBankRegistrationStatus(req.address, 'rejected');
+                      setBankRequests(getPendingBankRegistrations());
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlowCard>
+      )}
+
+      {/* Admin Explorer — full compliance view */}
+      <div className="mb-6">
+        <AdminExplorer />
       </div>
 
       {/* Main Content */}

@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, ReactNode } from 'react';
 import Link from 'next/link';
 
 interface LandingPageProps {
-  onConnect: () => Promise<void>;
+  onConnect: (providerType?: 'metamask' | 'phantom') => Promise<void>;
   onConnectSuccess: () => void;
   onExplore: () => void;
   isConnecting: boolean;
+  walletAddress?: string | null;
 }
 
 function useReveal(threshold = 0.1) {
@@ -56,18 +57,6 @@ function useParallax(speed = 0.15) {
   return [ref, offset] as const;
 }
 
-const MetaMaskIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 35 33" fill="none">
-    <path d="M32.96 1l-13.14 9.72 2.45-5.73L32.96 1z" fill="#E2761B" stroke="#E2761B" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2.66 1l13.02 9.81L13.35 4.99 2.66 1z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M28.23 23.53l-3.5 5.35 7.49 2.06 2.15-7.3-6.14-.11zM.67 23.64l2.13 7.3 7.49-2.06-3.5-5.35-6.12.11z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M9.93 14.42l-2.09 3.16 7.44.34-.26-8-5.09 4.5zM25.69 14.42l-5.17-4.58-.17 8.08 7.43-.34-2.09-3.16z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M10.29 28.88l4.48-2.18-3.87-3.02-.61 5.2zM20.85 26.7l4.48 2.18-.61-5.2-3.87 3.02z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M25.33 28.88l-4.48-2.18.36 2.93-.04 1.24 4.16-2zM10.29 28.88l4.16 2-.03-1.24.35-2.93-4.48 2.18z" fill="#D7C1B3" stroke="#D7C1B3" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M10.29 28.88l.64-5.35-4.14.11 3.5 5.24zM24.7 23.53l.63 5.35 3.5-5.24-4.13-.11z" fill="#CD6116" stroke="#CD6116" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
 function ConnectSpinner() {
   return (
     <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 28px' }}>
@@ -110,17 +99,21 @@ function StepDots({ step }: { step: number }) {
 }
 
 // ═══ WALLET MODAL — MetaMask ONLY ═══
-function WalletModal({ open, onClose, onConnect, onConnectSuccess }: { open: boolean; onClose: () => void; onConnect: () => Promise<void>; onConnectSuccess: () => void }) {
+function WalletModal({ open, onClose, onConnect, onConnectSuccess }: { open: boolean; onClose: () => void; onConnect: (providerType?: 'metamask' | 'phantom') => Promise<void>; onConnectSuccess: () => void }) {
   const [step, setStep] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+  const [selectedWallet, setSelectedWallet] = useState<'metamask' | 'phantom'>('metamask');
 
   useEffect(() => { if (!open) { setStep(0); setErrorMsg(''); } }, [open]);
   if (!open) return null;
 
-  const handleMetaMask = async () => {
+  const walletName = selectedWallet === 'phantom' ? 'Phantom' : 'MetaMask';
+
+  const handleWallet = async (providerType: 'metamask' | 'phantom') => {
+    setSelectedWallet(providerType);
     setStep(1);
     try {
-      await onConnect();
+      await onConnect(providerType);
       setStep(2);
       setTimeout(() => onConnectSuccess(), 2200);
     } catch (err) {
@@ -141,14 +134,19 @@ function WalletModal({ open, onClose, onConnect, onConnectSuccess }: { open: boo
         {step === 0 && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <h3 style={{ fontFamily: 'var(--f-display)', fontSize: 26, color: '#111', marginBottom: 6, textAlign: 'center' }}>Connect Wallet</h3>
-            <p style={{ fontSize: 14, color: '#999', marginBottom: 28, textAlign: 'center' }}>Connect MetaMask to access Keter Protocol.</p>
-            <button onClick={handleMetaMask} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderRadius: 14, border: '2px solid #eee', background: '#fff', cursor: 'pointer', width: '100%', transition: 'all 0.2s', fontFamily: 'var(--f-body)', animation: 'walletSlideIn 0.35s cubic-bezier(.16,1,.3,1) backwards' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#059669'; e.currentTarget.style.background = '#f0fdf4'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#eee'; e.currentTarget.style.background = '#fff'; }}>
-              <div style={{ width: 32, height: 32, flexShrink: 0 }}><MetaMaskIcon /></div>
-              <div style={{ textAlign: 'left' }}><span style={{ fontSize: 16, fontWeight: 600, color: '#111', display: 'block' }}>MetaMask</span><span style={{ fontSize: 12, color: '#999' }}>Browser Extension</span></div>
-              <span style={{ marginLeft: 'auto', fontSize: 10, color: '#059669', background: '#ecfdf5', padding: '4px 10px', borderRadius: 20, fontWeight: 700, fontFamily: 'var(--f-mono)' }}>RECOMMENDED</span>
-            </button>
+            <p style={{ fontSize: 14, color: '#999', marginBottom: 28, textAlign: 'center' }}>Choose a wallet to access Keter Protocol.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={() => handleWallet('metamask')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderRadius: 14, border: '2px solid #eee', background: '#fff', cursor: 'pointer', width: '100%', transition: 'all 0.2s', fontFamily: 'var(--f-body)', animation: 'walletSlideIn 0.35s cubic-bezier(.16,1,.3,1) backwards' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#059669'; e.currentTarget.style.background = '#f0fdf4'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#eee'; e.currentTarget.style.background = '#fff'; }}>
+                <div style={{ textAlign: 'left' }}><span style={{ fontSize: 16, fontWeight: 600, color: '#111', display: 'block' }}>MetaMask</span><span style={{ fontSize: 12, color: '#999' }}>Browser Extension</span></div>
+              </button>
+              <button onClick={() => handleWallet('phantom')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderRadius: 14, border: '2px solid #eee', background: '#fff', cursor: 'pointer', width: '100%', transition: 'all 0.2s', fontFamily: 'var(--f-body)', animation: 'walletSlideIn 0.35s cubic-bezier(.16,1,.3,1) 0.06s backwards' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#AB9FF2'; e.currentTarget.style.background = '#f5f3ff'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#eee'; e.currentTarget.style.background = '#fff'; }}>
+                <div style={{ textAlign: 'left' }}><span style={{ fontSize: 16, fontWeight: 600, color: '#111', display: 'block' }}>Phantom</span><span style={{ fontSize: 12, color: '#999' }}>Multi-Chain Wallet</span></div>
+              </button>
+            </div>
             <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0ee' }}>
               <p style={{ fontSize: 11, color: '#bbb', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12, fontFamily: 'var(--f-mono)' }}>Coming soon</p>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -163,9 +161,8 @@ function WalletModal({ open, onClose, onConnect, onConnectSuccess }: { open: boo
 
         {step === 1 && (
           <div style={{ textAlign: 'center', padding: '16px 0 8px', animation: 'fadeIn 0.5s ease' }}>
-            <div style={{ width: 48, height: 48, margin: '0 auto 20px', animation: 'floatIcon 2s ease-in-out infinite' }}><MetaMaskIcon /></div>
             <ConnectSpinner />
-            <h3 style={{ fontFamily: 'var(--f-display)', fontSize: 22, color: '#111', marginBottom: 10 }}>Waiting for MetaMask</h3>
+            <h3 style={{ fontFamily: 'var(--f-display)', fontSize: 22, color: '#111', marginBottom: 10 }}>Waiting for {walletName}</h3>
             <p style={{ fontSize: 13, color: '#999', fontFamily: 'var(--f-mono)' }}>Approve the connection in your wallet...</p>
           </div>
         )}
@@ -242,7 +239,7 @@ function FeatureTabs() {
 }
 
 // ═══ MAIN ═══
-export default function LandingPage({ onConnect, onConnectSuccess, onExplore, isConnecting }: LandingPageProps) {
+export default function LandingPage({ onConnect, onConnectSuccess, onExplore, isConnecting, walletAddress }: LandingPageProps) {
   const [walletOpen, setWalletOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [heroRef, heroOffset] = useParallax(0.12);
@@ -285,9 +282,16 @@ export default function LandingPage({ onConnect, onConnectSuccess, onExplore, is
             <Link href="/docs/contracts" style={{ fontSize: 14, color: '#777', textDecoration: 'none', padding: '8px 16px', borderRadius: 8 }}>Contracts</Link>
             <button onClick={onExplore} style={{ fontSize: 14, color: '#777', background: 'none', border: 'none', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--f-body)' }}>Explorer</button>
           </div>
-          <button onClick={() => setWalletOpen(true)} disabled={isConnecting} style={{ background: '#059669', color: '#fff', border: 'none', padding: '9px 22px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--f-body)', opacity: isConnecting ? 0.6 : 1 }}>
-            {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-          </button>
+          {walletAddress ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669' }} />
+              <span style={{ fontFamily: 'var(--f-mono)', fontSize: 13, color: '#555' }}>{walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</span>
+            </div>
+          ) : (
+            <button onClick={() => setWalletOpen(true)} disabled={isConnecting} style={{ background: '#059669', color: '#fff', border: 'none', padding: '9px 22px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--f-body)', opacity: isConnecting ? 0.6 : 1 }}>
+              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+            </button>
+          )}
         </div>
       </nav>
 
@@ -296,8 +300,8 @@ export default function LandingPage({ onConnect, onConnectSuccess, onExplore, is
         <div ref={heroRef} style={{ transform: `translateY(${heroOffset}px)`, transition: 'transform 0.05s linear' }}>
           <Reveal><p style={{ fontSize: 15, color: '#aaa', marginBottom: 24 }}>You are now entering</p></Reveal>
           <Reveal delay={80}>
-            <h1 style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(80px, 13vw, 200px)', fontWeight: 400, lineHeight: 0.9, letterSpacing: -8, color: '#111', marginBottom: 56, maxWidth: '100%' }}>
-              <em>Th</em>e Next<br/>Com<em>pli</em>a<em>nce</em><br/><em>Era</em>
+            <h1 style={{ fontFamily: 'var(--f-display)', fontSize: 'clamp(48px, 8vw, 140px)', fontWeight: 400, lineHeight: 0.9, letterSpacing: -4, color: '#111', marginBottom: 56, maxWidth: '100%', whiteSpace: 'nowrap' }}>
+              <em>Th</em>e Next Com<em>pli</em>a<em>nce</em> <em>Era</em>
             </h1>
           </Reveal>
           <Reveal delay={180}>
@@ -446,19 +450,15 @@ export default function LandingPage({ onConnect, onConnectSuccess, onExplore, is
       <footer style={{ borderTop: '1px solid #e8e8e5', background: '#fff' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '80px 40px 40px' }}>
           <Reveal>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr', gap: 48, marginBottom: 64 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 48, marginBottom: 64 }}>
               <div>
                 <p style={{ fontFamily: 'var(--f-display)', fontSize: 24, color: '#111', marginBottom: 20 }}>Keter</p>
                 <h3 style={{ fontFamily: 'var(--f-display)', fontSize: 24, fontWeight: 400, color: '#444', lineHeight: 1.3, marginBottom: 28 }}>Build the future with Keter</h3>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {['GitHub', 'Discord', 'X'].map(s => (<a key={s} href="#" style={{ fontSize: 13, color: '#777', textDecoration: 'none', border: '1px solid #e0e0dd', borderRadius: 8, padding: '8px 16px', fontWeight: 500 }}>{s}</a>))}
-                </div>
               </div>
               {[
                 { title: 'Build', links: [{ l: 'Documentation', h: '/docs/architecture' }, { l: 'ZK Circuit', h: '/docs/circuit' }, { l: 'Smart Contracts', h: '/docs/contracts' }] },
                 { title: 'Learn', links: [{ l: 'Protocol Flow', h: '/docs/flow' }, { l: 'Architecture', h: '/docs/architecture' }] },
                 { title: 'Participate', links: [{ l: 'Explorer', h: '/dashboard' }] },
-                { title: 'Engage', links: [{ l: 'GitHub', h: '#' }, { l: 'Discord', h: '#' }, { l: 'X', h: '#' }] },
               ].map(col => (
                 <div key={col.title}>
                   <p style={{ fontSize: 14, fontWeight: 600, color: '#444', marginBottom: 20 }}>{col.title}</p>
