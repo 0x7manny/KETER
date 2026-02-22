@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import GlowCard from '../ui/GlowCard';
 import NeonButton from '../ui/NeonButton';
 import StatusBadge from '../ui/StatusBadge';
@@ -157,6 +158,25 @@ export function InvestorDashboard({ wallet }: InvestorDashboardProps) {
             </>
           ) : (
             <>
+              <GlowCard>
+                <div className="flex items-start gap-4">
+                  <span className="text-3xl">🪪</span>
+                  <div className="flex-1">
+                    <h2 className="font-serif text-xl text-keter-text mb-1">
+                      Identity Verification
+                    </h2>
+                    <p className="text-keter-text-secondary text-sm mb-4">
+                      Verify your identity with a photo ID and a live selfie before submitting your KYC request.
+                    </p>
+                    <Link href="/kyc">
+                      <NeonButton variant="primary">
+                        Start Face Verification →
+                      </NeonButton>
+                    </Link>
+                  </div>
+                </div>
+              </GlowCard>
+
               <KYCForm wallet={wallet} />
 
               {/* Import credentials received from bank */}
