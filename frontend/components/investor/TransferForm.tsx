@@ -52,6 +52,13 @@ export function TransferForm({ wallet }: TransferFormProps) {
         return;
       }
 
+      // Validate amount against bank-set transfer limit
+      if (parseFloat(amount) > parseFloat(credentials.maxAmount)) {
+        setError(`Amount exceeds your transfer limit (${credentials.maxAmount})`);
+        setLoading(false);
+        return;
+      }
+
       // Get merkle proof
       const proof = getProof(credentials.leafIndex);
       if (!proof) {
