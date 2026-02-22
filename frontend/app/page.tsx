@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import LandingPage from '@/components/landing/LandingPage';
 
@@ -10,25 +10,26 @@ export default function Home() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const handleConnect = async () => {
+  const handleConnect = useCallback(async (providerType?: 'metamask' | 'phantom') => {
     setIsConnecting(true);
-    try {
-      await wallet.connect();
-      router.push('/dashboard');
-    } catch {
-      setIsConnecting(false);
-    }
-  };
+    await wallet.connect(providerType);
+  }, [wallet]);
 
-  const handleExplore = () => {
+  const handleConnectSuccess = useCallback(() => {
     router.push('/dashboard');
-  };
+  }, [router]);
+
+  const handleExplore = useCallback(() => {
+    router.push('/dashboard');
+  }, [router]);
 
   return (
     <LandingPage
       onConnect={handleConnect}
+      onConnectSuccess={handleConnectSuccess}
       onExplore={handleExplore}
       isConnecting={isConnecting}
+      walletAddress={wallet.address}
     />
   );
 }

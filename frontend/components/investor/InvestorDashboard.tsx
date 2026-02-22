@@ -58,6 +58,14 @@ export function InvestorDashboard({ wallet }: InvestorDashboardProps) {
             </div>
             <div>
               <p className="text-xs font-sans text-keter-text-muted uppercase tracking-wide mb-0.5">
+                Transfer Limit
+              </p>
+              <p className="text-sm font-sans text-keter-text">
+                {Number(credentials.maxAmount).toLocaleString()} KETER
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-sans text-keter-text-muted uppercase tracking-wide mb-0.5">
                 Leaf Index
               </p>
               <p className="text-sm font-mono text-keter-text">

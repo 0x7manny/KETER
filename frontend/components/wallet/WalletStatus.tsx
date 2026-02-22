@@ -41,7 +41,8 @@ const InfoRow: React.FC<{
 const WalletStatus: React.FC<WalletStatusProps> = ({ wallet, balance }) => {
   if (!wallet.address) return null;
 
-  const formattedBalance = ethers.formatUnits(balance, 18);
+  // Raw integer balance (no decimals — circuit uses u64 amounts)
+  const formattedBalance = Number(balance).toLocaleString();
 
   return (
     <GlowCard>

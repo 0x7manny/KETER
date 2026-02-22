@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { ethers } from 'ethers';
 import GlowCard from '../ui/GlowCard';
 import { WalletState } from '../../hooks/useWallet';
 import { useBalance } from '../../hooks/useBalance';
@@ -13,13 +12,9 @@ interface BalanceProps {
 export function Balance({ wallet }: BalanceProps) {
   const { balance, loading, refresh } = useBalance(wallet.provider, wallet.address);
 
+  // Raw integer balance (no decimals — circuit uses u64 amounts)
   const formatBalance = (bal: bigint): string => {
-    const formatted = ethers.formatUnits(bal, 18);
-    const num = parseFloat(formatted);
-    return num.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+    return Number(bal).toLocaleString('en-US');
   };
 
   return (

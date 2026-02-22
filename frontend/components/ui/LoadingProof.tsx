@@ -75,9 +75,9 @@ export function LoadingProof({ step = 1 }: LoadingProofProps) {
           Proving compliance without revealing identity
         </p>
 
-        {/* Elapsed time */}
+        {/* Elapsed time + estimate */}
         <p className="text-xs text-keter-text-muted font-mono mb-8">
-          {elapsed}s elapsed
+          {elapsed}s elapsed — typically ~10s
         </p>
 
         {/* Step indicator */}

@@ -10,8 +10,6 @@ const docPages = [
   { href: '/docs/frontend', label: 'Frontend' },
   { href: '/docs/flow', label: 'Protocol Flow' },
   { href: '/docs/erc1400', label: 'ERC-1400' },
-  { href: '/docs/alephium', label: 'Alephium' },
-  { href: '/docs/roadmap', label: 'Roadmap' },
 ];
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {

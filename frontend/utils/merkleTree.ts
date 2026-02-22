@@ -1,17 +1,14 @@
 'use client';
 
-import { poseidonHash } from './poseidon';
-import { InvestorCredentials } from './credentials';
+import { poseidonHash, poseidonHash8 } from './poseidon';
+import { InvestorCredentials, stringToField, KYCRequest } from './credentials';
 
 // === Types ===
 
 export interface MerkleLeaf {
   index: number;
   hash: bigint;
-  address: string;
-  countryCode: number;
-  investorType: number;
-  salt: bigint;
+  wallet: string;
 }
 
 export interface MerkleTree {
@@ -58,13 +55,61 @@ export const createEmptyTree = async (): Promise<MerkleTree> => {
   };
 };
 
+// === Leaf Computation (3-step process matching Noir circuit) ===
+
+export const computeLeafFinal = async (
+  request: KYCRequest,
+  wallet: string,
+  salt: bigint,
+  maxAmount: bigint,
+  kycFace: bigint,
+): Promise<{ leafFinal: bigint; credentials: Omit<InvestorCredentials, 'leafIndex'> }> => {
+  // Encode all fields as Field elements
+  const nameField = BigInt(stringToField(request.name));
+  const surnameField = BigInt(stringToField(request.surname));
+  const ageField = BigInt(request.age);
+  const addressField = BigInt(stringToField(request.physicalAddress));
+  const walletField = BigInt(wallet);
+  const countryCodeField = BigInt(request.country);
+  const investorTypeField = BigInt(request.investorType);
+  const kycFaceField = kycFace;
+
+  // Step 1: hash_8([name, surname, age, address, wallet, country_code, investor_type, kyc_face])
+  const leaf = await poseidonHash8([
+    nameField, surnameField, ageField, addressField,
+    walletField, countryCodeField, investorTypeField, kycFaceField,
+  ]);
+
+  // Step 2: hash_2([leaf, salt])
+  const leafInter = await poseidonHash([leaf, salt]);
+
+  // Step 3: hash_2([leaf_inter, max_amount])
+  const leafFinal = await poseidonHash([leafInter, maxAmount]);
+
+  const credentials: Omit<InvestorCredentials, 'leafIndex'> = {
+    name: nameField.toString(),
+    surname: surnameField.toString(),
+    age: ageField.toString(),
+    address: addressField.toString(),
+    wallet: walletField.toString(),
+    countryCode: request.country,
+    kycFace: kycFaceField.toString(),
+    investorType: request.investorType,
+    maxAmount: maxAmount.toString(),
+    salt: salt.toString(),
+    nonce: 0,
+  };
+
+  return { leafFinal, credentials };
+};
+
 // === Leaf Insertion ===
 
 export const insertLeaf = async (
   tree: MerkleTree,
-  address: string,
-  countryCode: number,
-  investorType: number
+  request: KYCRequest,
+  wallet: string,
+  maxAmount: string,
 ): Promise<{ tree: MerkleTree; credentials: InvestorCredentials }> => {
   // Find next free slot
   const leafIndex = tree.leaves.findIndex(l => l === null);
@@ -78,27 +123,25 @@ export const insertLeaf = async (
     '0x' + Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('')
   );
 
-  // Compute leaf hash = poseidon(address, countryCode, investorType, salt)
-  const addressBigInt = BigInt(address);
-  const leafHash = await poseidonHash([
-    addressBigInt,
-    BigInt(countryCode),
-    BigInt(investorType),
-    salt,
-  ]);
+  // kyc_face = 1 means KYC facial verification passed (flag, not a hash)
+  const kycFace = 1n;
+
+  const maxAmountBigInt = BigInt(maxAmount);
+
+  // Compute the 3-step leaf hash
+  const { leafFinal, credentials: baseCreds } = await computeLeafFinal(
+    request, wallet, salt, maxAmountBigInt, kycFace
+  );
 
   // Insert leaf
-  tree.leaves[leafIndex] = leafHash;
-  tree.nodes[0][leafIndex] = leafHash;
+  tree.leaves[leafIndex] = leafFinal;
+  tree.nodes[0][leafIndex] = leafFinal;
 
   // Store leaf data
   tree.leafData.push({
     index: leafIndex,
-    hash: leafHash,
-    address,
-    countryCode,
-    investorType,
-    salt,
+    hash: leafFinal,
+    wallet,
   });
 
   // Recompute all parents up to root
@@ -116,10 +159,7 @@ export const insertLeaf = async (
   tree.root = tree.nodes[DEPTH][0];
 
   const credentials: InvestorCredentials = {
-    address,
-    countryCode,
-    investorType,
-    salt: salt.toString(),
+    ...baseCreds,
     leafIndex,
   };
 
