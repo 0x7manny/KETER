@@ -9,6 +9,7 @@ dist/
 build/
 out/
 .next/
+target/
 
 # Environment
 .env
@@ -35,5 +36,3 @@ Thumbs.db
 # Misc
 *.log
 coverage/
-/frontend/.claude
-/.claude

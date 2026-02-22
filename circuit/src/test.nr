@@ -161,22 +161,3 @@ unconstrained fn test_sender(){
     }
   }
 }
-
-#[test]
-fn test_print_tree() {
-    let (name, surname, age, address, wallet, country_code, investor_type, kyc_face, salt, max_amount, nonce, s0, s1, s2, s3, root, nullifier) = get_root();
-    println(f"s0: {s0}");
-    println(f"s1: {s1}");
-    println(f"s2: {s2}");
-    println(f"s3: {s3}");
-    println(f"root: {root}");
-    println(f"nullifier: {nullifier}");
-}
-
-#[test]
-fn test_print_nullifier2() {
-    let salt = 0xd1359c703c1d7a1d1429f96f40b;
-    let nonce: Field = 2;
-    let nullifier2 = hash_2([salt, nonce]);
-    println(f"nullifier2: {nullifier2}");
-}
