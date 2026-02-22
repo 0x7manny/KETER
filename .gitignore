@@ -37,7 +37,10 @@ Thumbs.db
 *.log
 coverage/
 <<<<<<< HEAD
+<<<<<<< HEAD
 /frontend/.claude
 /.claude
 =======
 >>>>>>> features/noir_circuit
+=======
+>>>>>>> ae91f70d574fe488c26c62b393bb89184accb34c

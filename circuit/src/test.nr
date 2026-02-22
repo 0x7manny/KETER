@@ -162,6 +162,7 @@ unconstrained fn test_sender(){
   }
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 #[test]
 fn test_print_tree() {
@@ -183,3 +184,5 @@ fn test_print_nullifier2() {
 }
 =======
 >>>>>>> features/noir_circuit
+=======
+>>>>>>> ae91f70d574fe488c26c62b393bb89184accb34c

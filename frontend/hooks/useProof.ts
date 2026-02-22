@@ -17,10 +17,12 @@ export const useProof = () => {
   const initialize = useCallback(async () => {
     // Dynamic imports for code splitting (these are large WASM modules)
     const { Noir } = await import('@noir-lang/noir_js');
-    const { BarretenbergBackend } = await import('@noir-lang/backend_barretenberg');
+    const { UltraHonkBackend, Barretenberg } = await import('@aztec/bb.js');
     const circuit = await import('../circuit/keter_circuit.json');
 
-    const backend = new BarretenbergBackend(circuit as any);
+    // Create Barretenberg WASM instance first
+    const api = await Barretenberg.new();
+    const backend = new UltraHonkBackend((circuit as any).bytecode, api);
     const noir = new Noir(circuit as any);
 
     backendRef.current = backend;
@@ -42,9 +44,11 @@ export const useProof = () => {
       setProofStep(2);
       const { witness } = await noirRef.current.execute(inputs);
 
-      // Step 3: Finalize proof
+      // Step 3: Finalize proof (target: 'evm' → keccak hash to match on-chain verifier)
       setProofStep(3);
-      const proof = await backendRef.current.generateProof(witness);
+      const proof = await backendRef.current.generateProof(witness, {
+        verifierTarget: 'evm',
+      });
 
       return proof;
     } catch (err: any) {

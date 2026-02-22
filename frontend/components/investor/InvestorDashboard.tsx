@@ -1,15 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import GlowCard from '../ui/GlowCard';
+import NeonButton from '../ui/NeonButton';
 import StatusBadge from '../ui/StatusBadge';
 import { WalletState } from '../../hooks/useWallet';
 import {
   hasCredentials,
   loadCredentials,
+  saveCredentials,
   getKYCRequests,
   COUNTRIES,
   INVESTOR_TYPES,
+  InvestorCredentials,
 } from '../../utils/credentials';
 import Balance from './Balance';
 import TransferForm from './TransferForm';
@@ -21,8 +24,29 @@ interface InvestorDashboardProps {
 }
 
 export function InvestorDashboard({ wallet }: InvestorDashboardProps) {
+  const [importJson, setImportJson] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState(false);
+
   const hasCreds = wallet.address ? hasCredentials(wallet.address) : false;
   const credentials = hasCreds ? loadCredentials(wallet.address!) : null;
+
+  const handleImportCredentials = () => {
+    try {
+      const parsed = JSON.parse(importJson) as InvestorCredentials;
+      if (!parsed.salt || !parsed.wallet || parsed.leafIndex === undefined) {
+        setImportError('Invalid credentials format');
+        return;
+      }
+      saveCredentials(wallet.address!, parsed);
+      setImportSuccess(true);
+      setImportError(null);
+      // Reload to pick up new credentials
+      window.location.reload();
+    } catch {
+      setImportError('Invalid JSON');
+    }
+  };
 
   // Check KYC request status for the sidebar
   const kycRequests = getKYCRequests();
@@ -54,6 +78,14 @@ export function InvestorDashboard({ wallet }: InvestorDashboardProps) {
               </p>
               <p className="text-sm font-sans text-keter-text">
                 {INVESTOR_TYPES[credentials.investorType] || 'Unknown'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-sans text-keter-text-muted uppercase tracking-wide mb-0.5">
+                Transfer Limit
+              </p>
+              <p className="text-sm font-sans text-keter-text">
+                {Number(credentials.maxAmount).toLocaleString()} KETER
               </p>
             </div>
             <div>
@@ -124,7 +156,39 @@ export function InvestorDashboard({ wallet }: InvestorDashboardProps) {
               <TransferHistory wallet={wallet} />
             </>
           ) : (
-            <KYCForm wallet={wallet} />
+            <>
+              <KYCForm wallet={wallet} />
+
+              {/* Import credentials received from bank */}
+              <GlowCard>
+                <h2 className="font-serif text-xl text-keter-text mb-1">
+                  Import Credentials
+                </h2>
+                <p className="text-keter-text-secondary text-sm mb-4">
+                  If the bank sent you credentials, paste them here.
+                </p>
+                <textarea
+                  value={importJson}
+                  onChange={(e) => setImportJson(e.target.value)}
+                  placeholder='{"name":"...","salt":"...","leafIndex":0,...}'
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg border border-keter-border-light bg-keter-bg font-mono text-xs text-keter-text placeholder:text-keter-text-muted focus:outline-none focus:border-keter-accent focus:ring-1 focus:ring-keter-accent/20 transition-colors mb-3"
+                />
+                {importError && (
+                  <p className="text-sm text-red-600 mb-2">{importError}</p>
+                )}
+                {importSuccess && (
+                  <p className="text-sm text-emerald-600 mb-2">Credentials imported successfully.</p>
+                )}
+                <NeonButton
+                  variant="secondary"
+                  onClick={handleImportCredentials}
+                  disabled={!importJson.trim()}
+                >
+                  Import
+                </NeonButton>
+              </GlowCard>
+            </>
           )}
         </div>
 

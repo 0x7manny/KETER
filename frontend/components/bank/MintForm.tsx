@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import { WalletState } from '../../hooks/useWallet';
 import GlowCard from '../ui/GlowCard';
 import NeonButton from '../ui/NeonButton';
-import { mintTokens, getErrorMessage } from '../../utils/contracts';
+import { issueTokens, getErrorMessage } from '../../utils/contracts';
 
 interface MintFormProps {
   wallet: WalletState;
@@ -41,7 +41,7 @@ export function MintForm({ wallet }: MintFormProps) {
 
     setLoading(true);
     try {
-      const tx = await mintTokens(wallet.signer, address, parsedAmount);
+      const tx = await issueTokens(wallet.signer, address, parsedAmount);
       setSuccess(tx.hash);
       setAddress('');
       setAmount('');
@@ -54,7 +54,7 @@ export function MintForm({ wallet }: MintFormProps) {
 
   return (
     <GlowCard>
-      <h2 className="font-serif text-xl mb-4 text-keter-text">Mint Tokens</h2>
+      <h2 className="font-serif text-xl mb-4 text-keter-text">Issue Tokens</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm text-keter-text-secondary mb-1.5">
@@ -89,14 +89,14 @@ export function MintForm({ wallet }: MintFormProps) {
           disabled={loading}
           className="w-full"
         >
-          Mint Tokens
+          Issue Tokens
         </NeonButton>
       </form>
 
       {success && (
         <div className="mt-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
           <p className="text-sm text-emerald-700">
-            Tokens minted successfully
+            Tokens issued successfully
           </p>
           <p className="text-xs font-mono text-emerald-600 mt-1">
             Tx: {success.slice(0, 10)}...{success.slice(-8)}
