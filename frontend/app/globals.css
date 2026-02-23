@@ -1,0 +1,97 @@
+@import '@fontsource/dm-serif-display/400.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    @apply bg-keter-bg text-keter-text font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #e8e8ed;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #aeaeb2;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6e6e73;
+  }
+
+  /* Selection color */
+  ::selection {
+    background-color: #d1fae5;
+    color: #1d1d1f;
+  }
+
+  /* Input & select base styles */
+  input,
+  select,
+  textarea {
+    @apply border border-keter-border rounded-lg px-3 py-2 text-sm text-keter-text bg-white
+      transition-all duration-200 ease-in-out
+      focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-keter-accent;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-keter-text-muted;
+  }
+}
+
+@layer components {
+  /* Smooth transitions on interactive elements */
+  a,
+  button,
+  [role='button'] {
+    @apply transition-all duration-200 ease-in-out;
+  }
+}
+
+/* Fade-in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide-up animation */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
